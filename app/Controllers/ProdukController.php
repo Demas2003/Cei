@@ -3,9 +3,12 @@
 namespace App\Controllers;
 
 use App\Models\MProduk;
+use CodeIgniter\RESTful\ResourceController;
 
-class ProdukController extends RestfulController
+class ProdukController extends ResourceController
 {
+    protected $format = 'json';
+
     public function create()
     {
         $data = [
@@ -14,24 +17,49 @@ class ProdukController extends RestfulController
             'harga' => $this->request->getVar('harga'),
         ];
 
+        // Validasi input
+        if (!$data['kode_produk'] || !$data['nama_produk'] || !$data['harga']) {
+            return $this->fail('Semua data wajib diisi.', 400);
+        }
+
         $model = new MProduk();
-        $model->insert($data);
-        $produk = $model->find($model->getInsertID());
-        return $this->responseHasil(200, true, $produk);
+
+        try {
+            $model->insert($data);
+            $produk = $model->find($model->getInsertID());
+            return $this->respond([
+                'status' => true,
+                'message' => 'Produk berhasil ditambahkan.',
+                'data' => $produk
+            ], 201);
+        } catch (\Exception $e) {
+            return $this->fail('Gagal menyimpan data: ' . $e->getMessage(), 500);
+        }
     }
 
     public function list()
     {
         $model = new MProduk();
         $produk = $model->findAll();
-        return $this->responseHasil(200, true, $produk);
+        return $this->respond([
+            'status' => true,
+            'data' => $produk
+        ], 200);
     }
 
     public function detail($id)
     {
         $model = new MProduk();
         $produk = $model->find($id);
-        return $this->responseHasil(200, true, $produk);
+
+        if (!$produk) {
+            return $this->failNotFound('Produk tidak ditemukan.');
+        }
+
+        return $this->respond([
+            'status' => true,
+            'data' => $produk
+        ], 200);
     }
 
     public function ubah($id)
@@ -42,16 +70,43 @@ class ProdukController extends RestfulController
             'harga' => $this->request->getVar('harga'),
         ];
 
+        // Validasi input
+        if (!$data['kode_produk'] || !$data['nama_produk'] || !$data['harga']) {
+            return $this->fail('Semua data wajib diisi.', 400);
+        }
+
         $model = new MProduk();
-        $model->update($id, $data);
-        $produk = $model->find($id);
-        return $this->responseHasil(200, true, $produk);
+
+        try {
+            $model->update($id, $data);
+            $produk = $model->find($id);
+            return $this->respond([
+                'status' => true,
+                'message' => 'Produk berhasil diubah.',
+                'data' => $produk
+            ], 200);
+        } catch (\Exception $e) {
+            return $this->fail('Gagal mengubah data: ' . $e->getMessage(), 500);
+        }
     }
 
     public function hapus($id)
     {
         $model = new MProduk();
-        $model->delete($id);
-        return $this->responseHasil(200, true, "Produk berhasil dihapus.");
+        $produk = $model->find($id);
+
+        if (!$produk) {
+            return $this->failNotFound('Produk tidak ditemukan.');
+        }
+
+        try {
+            $model->delete($id);
+            return $this->respond([
+                'status' => true,
+                'message' => 'Produk berhasil dihapus.'
+            ], 200);
+        } catch (\Exception $e) {
+            return $this->fail('Gagal menghapus data: ' . $e->getMessage(), 500);
+        }
     }
 }

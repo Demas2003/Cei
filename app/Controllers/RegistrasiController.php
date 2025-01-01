@@ -11,26 +11,53 @@ class RegistrasiController extends ResourceController
 
     public function registrasi()
     {
-        // Debug: Cek apakah data diterima
-        log_message('debug', 'Input Data: ' . json_encode($this->request->getPost()));
-    
+        // Ambil data input dari request
         $data = [
             'nama' => $this->request->getVar('nama'),
             'email' => $this->request->getVar('email'),
-            'password' => password_hash($this->request->getVar('password'), PASSWORD_DEFAULT),
+            'password' => $this->request->getVar('password'),
         ];
-    
+
+        // Validasi input
         if (!$data['nama'] || !$data['email'] || !$data['password']) {
-            return $this->respond(['status' => false, 'message' => 'Data tidak lengkap'], 400);
+            return $this->respond([
+                'status' => false,
+                'message' => 'Nama, email, dan password wajib diisi.'
+            ], 400);
         }
-    
+
+        if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+            return $this->respond([
+                'status' => false,
+                'message' => 'Format email tidak valid.'
+            ], 400);
+        }
+
+        // Hash password sebelum disimpan
+        $data['password'] = password_hash($data['password'], PASSWORD_DEFAULT);
+
         $model = new MRegistrasi();
+
         try {
-            $model->insert($data);
-            return $this->respond(['status' => true, 'message' => 'Registrasi berhasil'], 200);
+            // Simpan data ke database
+            if ($model->insert($data)) {
+                return $this->respond([
+                    'status' => true,
+                    'message' => 'Registrasi berhasil.'
+                ], 201);
+            } else {
+                // Jika gagal menyimpan ke database
+                return $this->respond([
+                    'status' => false,
+                    'message' => 'Gagal menyimpan data ke database.'
+                ], 500);
+            }
         } catch (\Exception $e) {
-            return $this->respond(['status' => false, 'message' => $e->getMessage()], 500);
+            // Tangkap error lainnya
+            return $this->respond([
+                'status' => false,
+                'message' => 'Terjadi kesalahan: ' . $e->getMessage()
+            ], 500);
         }
     }
-    
 }
